@@ -1,9 +1,9 @@
+from dataCleaning import csvCleaning
 
 
 class FileNames:
-    pass
+    dataPath = '/data/stars_and_comments.csv'
 
 
 if __name__ == '__main__':
-    # clean_data(fileName=FileNames.airline_tweets_csv)
-    pass
+    csvCleaning(data=FileNames.dataPath)
