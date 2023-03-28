@@ -11,6 +11,7 @@ packaging = "*"
 requests = "*"
 opt-einsum = "*"
 pandas = "*"
+matplotlib = "*"
 
 [dev-packages]
 autopep8 = "*"
