@@ -26,8 +26,8 @@ def text_sentiment_neural_network(testData, trainData):
 
     model.add(Dense(10, activation='softmax'))
 
-    opt = tf.keras.optimizers.Adam(lr=1e-3, decay=1e-5)
+    opt = tf.keras.optimizers.legacy.Adam(lr=1e-3, decay=1e-5)
 
     model.compile(loss='sparse_categorical_corossentropy', optimizer=opt, metrics=['accuracy'])
 
-    model.fit(data['stars'], data['comment'], epoch=3, validation_data=(testData['stars'], testData['comment']))
+    model.fit(data['stars'], data['comment'], epochs=3, validation_data=(testData['stars'], testData['comment']))
