@@ -1,33 +1,43 @@
 import pandas as pd
+import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, LSTM
+from keras.layers import SimpleRNN, LSTM, GRU, Bidirectional, Dense, Embedding, Dropout
+from keras.datasets import imdb
 from utils.utils import coloring
 
 
 def text_sentiment_neural_network(testData, trainData):
     testData = pd.read_csv(testData)
     trainData = pd.read_csv(trainData)
+    vocab_size = 5000
+    max_words = 400
 
-    data = pd.concat([trainData['stars'], trainData['comment']], axis=1)
-    coloring(data=data.shape)
+    word_ind = imdb.get_word_index()
+    word_ind = {i: word for word, i in word_ind.items()}
     
-    model = Sequential()
+    (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=vocab_size)
 
-    model.add(LSTM(128, input_shape=(data.shape), activation='relu', return_sequences=True))
-    model.add(Dropout(0.2))
+    print([word_ind[i] for i in x_train[0]])
+    print("Max length of a review:: ", len(max((x_train+x_test), key=len)))
+    print("Min length of a review:: ", len(min((x_train+x_test), key=len)))
 
-    model.add(LSTM(128, activation='relu'))
-    model.add(Dropout(0.2))
+    x_train = keras.utils.pad_sequences(x_train, maxlen=max_words)
+    x_test = keras.utils.pad_sequences(x_test, maxlen=max_words)
+    
+    x_valid, y_valid = x_train[:64], y_train[:64]
+    x_train_, y_train_ = x_train[64:], y_train[64:]
 
-    model.add(Dense(32, activation='relu'))
-    model.add(Dropout(0.2))
+    print(f'Valid x - {x_valid}')
 
-    model.add(Dense(10, activation='softmax'))
+    ### For personaly collected data
+    # measure = np.vectorize(len)
+    # maxlen = 'max len of comments %s' % measure(testdata['comment'].astype(str)).max(axis=0)
+    # minlen = 'min len of comments %s' % measure(testdata['comment'].astype(str)).min(axis=0)
+    # coloring(data=maxlen)
+    # coloring(data=minlen)
 
-    opt = tf.keras.optimizers.legacy.Adam(lr=1e-3, decay=1e-5)
-
-    model.compile(loss='sparse_categorical_corossentropy', optimizer=opt, metrics=['accuracy'])
-
-    model.fit(data['stars'], data['comment'], epochs=3, validation_data=(testData['stars'], testData['comment']))
+    # model = sequential(name='bidirectional_lstm')
+    # model.add(Embedding(vocab_size, ))
+    ### End
