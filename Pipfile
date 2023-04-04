@@ -12,6 +12,9 @@ requests = "*"
 opt-einsum = "*"
 pandas = "*"
 matplotlib = "*"
+fasttext = "*"
+pymorphy2 = "*"
+tqdm = "*"
 
 [dev-packages]
 autopep8 = "*"
