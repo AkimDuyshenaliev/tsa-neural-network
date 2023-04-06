@@ -16,22 +16,22 @@ def text_sentiment_neural_network(testData, trainData):
 
     word_ind = imdb.get_word_index()
     word_ind = {i: word for word, i in word_ind.items()}
-    
+
     (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=vocab_size)
 
     print([word_ind[i] for i in x_train[0]])
-    print("Max length of a review:: ", len(max((x_train+x_test), key=len)))
-    print("Min length of a review:: ", len(min((x_train+x_test), key=len)))
+    print("Max length of a review:: ", len(max((x_train + x_test), key=len)))
+    print("Min length of a review:: ", len(min((x_train + x_test), key=len)))
 
     x_train = keras.utils.pad_sequences(x_train, maxlen=max_words)
     x_test = keras.utils.pad_sequences(x_test, maxlen=max_words)
-    
+
     x_valid, y_valid = x_train[:64], y_train[:64]
     x_train_, y_train_ = x_train[64:], y_train[64:]
 
     print(f'Valid x - {x_valid}')
 
-    ### For personaly collected data
+    # For personaly collected data
     # measure = np.vectorize(len)
     # maxlen = 'max len of comments %s' % measure(testdata['comment'].astype(str)).max(axis=0)
     # minlen = 'min len of comments %s' % measure(testdata['comment'].astype(str)).min(axis=0)
@@ -40,4 +40,4 @@ def text_sentiment_neural_network(testData, trainData):
 
     # model = sequential(name='bidirectional_lstm')
     # model.add(Embedding(vocab_size, ))
-    ### End
+    # End
