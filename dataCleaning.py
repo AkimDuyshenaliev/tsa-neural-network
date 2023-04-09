@@ -1,7 +1,8 @@
+from utils.utils import coloring
 import pandas as pd
 
 
-def csvCleaning(data):
+def csvCleaning(data, min_len=4):
     df = pd.read_csv(data)
     # Remove duplicates in the original DataFrame
     df.drop_duplicates(inplace=True)
@@ -10,11 +11,11 @@ def csvCleaning(data):
     
     ### Cleaning
     df['comment'] = df['comment'].str.replace('[\n\t]', ' ').str.replace('[^\w\s]', ' ')
-    df['comment'] = df['comment'].str.lower().str.strip()
-    df['comment'] = df['comment'].str.split(pat=' ')
-    df.drop(df[df['comment'].str.len() < 4].index, inplace=True) # Drop comments shorter than 4 words
+    df['comment'] = df['comment'].str.lower().str.strip().str.split(pat=' ')
     df['comment'] = df['comment'] \
-        .apply(lambda string : ' '.join(s for s in string if s.isalnum()))
+        .apply(lambda string : ' '.join(s for s in string if s.isalnum())).str.split(pat=' ')
+    df.drop(df[df['comment'].str.len() < min_len].index, inplace=True) # Drop comments shorter than 4 words
+    df['comment'] = df['comment'].apply(lambda data : ' '.join(s for s in data))
     ### End of cleaning
 
     train_data = df.sample(frac=0.7)
@@ -24,6 +25,8 @@ def csvCleaning(data):
     df.to_csv('data/clean_data.csv')
     train_data.to_csv('data/clean_train_data.csv')
     test_data.to_csv('data/clean_test_data.csv')
+
+    coloring(data='Cleaning finished, files created', r='38', g='05', b='46')
 
 
 def freqVocab(data):
