@@ -23,7 +23,8 @@ if __name__ == '__main__':
 
         match choice:
             case 1:
-                csvCleaning(FileNames.dataPath)
+                min_len = int(input('Select minimum length of each comment: '))
+                csvCleaning(data=FileNames.dataPath, min_len=min_len)
             case 2:
                 freqVocab(FileNames.freqrnc)
             case 3:
