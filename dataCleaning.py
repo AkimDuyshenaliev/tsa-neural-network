@@ -7,16 +7,23 @@ def csvCleaning(data):
     df.drop_duplicates(inplace=True)
     df.dropna(inplace=True)
     df = df[df['comment'].str.contains('.desktop') == False]
-    df['comment'] = df['comment'].str.replace(
-        '[^\w\s]', ' ').str.replace('\n\t', '')
-    df['comment'] = df['comment'].str.lower().str.strip().str.split(pat=' ')
-    df.drop(df[df['comment'].str.len() < 4].index, inplace=True)
+    
+    ### Cleaning
+    df['comment'] = df['comment'].str.replace('[\n\t]', ' ').str.replace('[^\w\s]', ' ')
+    df['comment'] = df['comment'].str.lower().str.strip()
+    df['comment'] = df['comment'].str.split(pat=' ')
+    df.drop(df[df['comment'].str.len() < 4].index, inplace=True) # Drop comments shorter than 4 words
+    df['comment'] = df['comment'] \
+        .apply(lambda string : ' '.join(s for s in string if s.isalnum()))
+    ### End of cleaning
+
     train_data = df.sample(frac=0.7)
     test_data = df.drop(train_data.index)
-    print(test_data[50:100])
-    # df.to_csv('data/clean_data.csv')
-    # train_data.to_csv('data/clean_train_data.csv')
-    # test_data.to_csv('data/clean_test_data.csv')
+
+    ### Write to csv
+    df.to_csv('data/clean_data.csv')
+    train_data.to_csv('data/clean_train_data.csv')
+    test_data.to_csv('data/clean_test_data.csv')
 
 
 def freqVocab(data):
