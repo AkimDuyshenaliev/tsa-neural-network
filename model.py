@@ -30,14 +30,3 @@ def text_sentiment_neural_network(testData, trainData):
     x_train_, y_train_ = x_train[64:], y_train[64:]
 
     print(f'Valid x - {x_valid}')
-
-    # For personaly collected data
-    # measure = np.vectorize(len)
-    # maxlen = 'max len of comments %s' % measure(testdata['comment'].astype(str)).max(axis=0)
-    # minlen = 'min len of comments %s' % measure(testdata['comment'].astype(str)).min(axis=0)
-    # coloring(data=maxlen)
-    # coloring(data=minlen)
-
-    # model = sequential(name='bidirectional_lstm')
-    # model.add(Embedding(vocab_size, ))
-    # End
