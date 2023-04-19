@@ -2,39 +2,74 @@ from utils.utils import coloring
 import pandas as pd
 
 
-def csvCleaning(data, min_len=4):
+def columnCleaning(df, col):
+    try:
+        min_len = int(input('Select minimum length of each comment: '))
+    except:
+        min_len = 4
+
+    col = df.columns.get_loc(col) if type(col) is str else col
+
+    df.iloc[:, col] = df.iloc[:, col].str.replace('[\n\t]', ' ').str.replace('[^\w\s]', ' ')
+    df.iloc[:, col] = df.iloc[:, col].str.lower().str.strip().str.split(pat=' ')
+    df.iloc[:, col] = df.iloc[:, col] \
+        .apply(lambda string : ' '.join(s for s in string if s.isalnum())).str.split(pat=' ')
+    df.drop(df[df.iloc[:, col].str.len() < min_len].index, inplace=True) # Drop comments shorter than 4 words
+    df.iloc[:, col] = df.iloc[:, col].apply(lambda data : ' '.join(s for s in data))
+
+    return df
+
+
+def tweetsCleaning(data, clean_data_path):
+    neg_df = pd.read_csv(data[0], sep=';', usecols=[2, 3])
+    pos_df = pd.read_csv(data[1], sep=';', usecols=[2, 3])
+    
+    neg_df = columnCleaning(df=neg_df, col=1)
+    pos_df = columnCleaning(df=pos_df, col=1)
+
+    neg_df.to_csv(f'{clean_data_path}/tweets-clean/clean_tweets_negative.csv')
+    pos_df.to_csv(f'{clean_data_path}/tweets-clean/clean_tweets_positive.csv')
+    print('Done and written into CSV')
+
+
+def csvCleaning(data, clean_data_path):
+    try:
+        min_len = int(input('Select minimum length of each comment: '))
+    except:
+        min_len = 4
+
     df = pd.read_csv(data)
     # Remove duplicates in the original DataFrame
     df.drop_duplicates(inplace=True)
     df.dropna(inplace=True)
     df = df[df['comment'].str.contains('.desktop') == False]
     
-    ### Cleaning
-    df['comment'] = df['comment'].str.replace('[\n\t]', ' ').str.replace('[^\w\s]', ' ')
-    df['comment'] = df['comment'].str.lower().str.strip().str.split(pat=' ')
-    df['comment'] = df['comment'] \
-        .apply(lambda string : ' '.join(s for s in string if s.isalnum())).str.split(pat=' ')
-    df.drop(df[df['comment'].str.len() < min_len].index, inplace=True) # Drop comments shorter than 4 words
-    df['comment'] = df['comment'].apply(lambda data : ' '.join(s for s in data))
-    ### End of cleaning
+    df = columnCleaning(df=df, col='comment')
 
     train_data = df.sample(frac=0.7)
     test_data = df.drop(train_data.index)
 
-    ### Write to csv
-    df.to_csv('data/clean_data.csv')
-    train_data.to_csv('data/clean_train_data.csv')
-    test_data.to_csv('data/clean_test_data.csv')
+    choice = int(input('1 - Print\n2 - Write to csv\n'))
+    if choice == 1:
+        print(df[75:100])
+    elif choice == 2:
+        ### Write to csv
+        df.to_csv(f'{clean_data_path}/clean_data.csv')
+        train_data.to_csv(f'{clean_data_path}/clean_train_data.csv')
+        test_data.to_csv(f'{clean_data_path}/clean_test_data.csv')
+        coloring(data='Cleaning finished, files created', r='38', g='05', b='46')
+    else:
+        print('No such thing, printing out')
+        print(df[75:100])
 
-    coloring(data='Cleaning finished, files created', r='38', g='05', b='46')
 
 
-def freqVocab(data):
+def freqVocab(data, clean_data_path):
     df = pd.read_csv(data, sep='\t')
     df = df.drop(['PoS', 'R', 'D', 'Doc'], axis=1)
     df = df.sort_values(by='Freq(ipm)', ascending=False)
     df.insert(loc=0, column='index', value=range(1, len(df) + 1))
-    df.to_csv('data/freqVocabClean.csv', header=None, index=False)
+    df.to_csv(f'{clean_data_path}/freqVocabClean.csv', header=None, index=False)
 
 
 def applyVocab(commentData, vocabData):
