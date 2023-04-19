@@ -54,30 +54,10 @@ def csvCleaning(data, clean_data_path):
         print(df[75:100])
     elif choice == 2:
         ### Write to csv
-        df.to_csv(f'{clean_data_path}/clean_data.csv')
-        train_data.to_csv(f'{clean_data_path}/clean_train_data.csv')
-        test_data.to_csv(f'{clean_data_path}/clean_test_data.csv')
+        df.to_csv(f'{clean_data_path}/clean_comments.csv')
+        train_data.to_csv(f'{clean_data_path}/clean_train_comments.csv')
+        test_data.to_csv(f'{clean_data_path}/clean_test_comments.csv')
         coloring(data='Cleaning finished, files created', r='38', g='05', b='46')
     else:
         print('No such thing, printing out')
         print(df[75:100])
-
-
-
-def freqVocab(data, clean_data_path):
-    df = pd.read_csv(data, sep='\t')
-    df = df.drop(['PoS', 'R', 'D', 'Doc'], axis=1)
-    df = df.sort_values(by='Freq(ipm)', ascending=False)
-    df.insert(loc=0, column='index', value=range(1, len(df) + 1))
-    df.to_csv(f'{clean_data_path}/freqVocabClean.csv', header=None, index=False)
-
-
-def applyVocab(commentData, vocabData):
-    c_df = pd.read_csv(commentData, usecols=[
-                       'stars', 'comment'], index_col=False)  # Comments DataFrame
-    v_df = pd.read_csv(vocabData, index_col=False).set_index(
-        'index')  # Vocabulary DatFrame
-
-    c_df['comment'] = c_df['comment'].str.split(' ')
-    print(c_df.head(15))
-    print(v_df.head(15))
