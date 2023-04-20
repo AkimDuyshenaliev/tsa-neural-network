@@ -61,3 +61,17 @@ def csvCleaning(data, clean_data_path):
     else:
         print('No such thing, printing out')
         print(df[75:100])
+
+
+def makeTrainSeries(commentData, tweetsData):
+    full_comments_df = pd.read_csv(commentData[0], skiprows=1, header=None, usecols=[3])
+    # train_comments_df = pd.read_csv(commentData[1], skiprows=1, header=None, usecols=[3])
+    # test_comments_df = pd.read_csv(commentData[2], skiprows=1, header=None, usecols=[3])
+
+    neg_tweets_df = pd.read_csv(tweetsData[0], header=None, usecols=[2])
+    pos_tweets_df = pd.read_csv(tweetsData[1], header=None, usecols=[2])
+
+    main_df = pd.concat\
+        ([full_comments_df.iloc[:, 0], neg_tweets_df.iloc[:, 0], pos_tweets_df.iloc[:, 0]])\
+            .to_csv('data/train-data/unsupervised_train_data.csv', index=False, header=None)
+    print('Done\n')
