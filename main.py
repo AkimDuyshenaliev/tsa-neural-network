@@ -1,6 +1,8 @@
 from dataCleaning import tweetsCleaning, csvCleaning, makeTrainSeries
 from utils.trainFT import trainFastText, readFastTextModel
-# from model import text_sentiment_neural_network
+from model import textSentiment_RNN_neuralNetwork
+from model_example_rnn import example_RNN
+from model_example_cnn import example_CNN
 
 
 class FileNames:
@@ -34,11 +36,16 @@ if __name__ == '__main__':
             data=FileNames.unsupervisedTrainData)},
         {'name': 'load FastText model',
          'func': lambda: readFastTextModel(
-            model=FileNames.ftModel)}
-        # {'name': 'RNN model',
-        #  'func': lambda: text_sentiment_neural_network(
-        #         testData=FileNames.cleanTestPath,
-        #         trainData=FileNames.cleanTrainPath)}
+            model=FileNames.ftModel)},
+        {'name': 'RNN model',
+         'func': lambda: textSentiment_RNN_neuralNetwork(
+                data=FileNames.cleanComments,
+                tweetsData=FileNames.cleanTweets,
+                ftModelData=FileNames.ftModel)},
+        {'name': 'model example RNN',
+         'func': lambda: example_RNN()},
+        {'name': 'model example CNN',
+         'func': lambda: example_CNN()}
     ]
     while True:
         try:
