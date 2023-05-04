@@ -1,6 +1,5 @@
 import pandas as pd
 import fasttext
-from tqdm import tqdm
 
 from utils.utils import coloring
 
@@ -14,4 +13,7 @@ def trainFastText(data):
 
 def readFastTextModel(model):
     model = fasttext.load_model(model)
-    print(model.get_nearest_neighbors(str(input('Write a word: '))))
+    # print(model.get_nearest_neighbors(str(input('Write a word: '))))
+    sentence = '_'
+    sentence = sentence.split(sep=' ')
+    [print(model.get_word_vector(word)) for word in sentence]
