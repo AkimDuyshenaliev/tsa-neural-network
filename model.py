@@ -1,32 +1,60 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+import fasttext
 import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from keras.models import Sequential
-from keras.layers import SimpleRNN, LSTM, GRU, Bidirectional, Dense, Embedding, Dropout
-from keras.datasets import imdb
+from tensorflow.keras import layers
 from utils.utils import coloring
 
 
-def text_sentiment_neural_network(testData, trainData):
-    testData = pd.read_csv(testData)
-    trainData = pd.read_csv(trainData)
-    vocab_size = 5000
-    max_words = 400
+def textSentiment_RNN_neuralNetwork(data, tweetsData, ftModelData):
+    '''
+    0 - negative
+    1 - positive
+    '''
+    tweetsPos = pd.read_csv(tweetsData[1], skiprows=1, header=None, usecols=[2])
+    tweetsNeg = pd.read_csv(tweetsData[0], skiprows=1, header=None, usecols=[2])
+    tweetsPos.insert(loc=0, column=0, value=1)
+    tweetsNeg.insert(loc=0, column=0, value=0)
 
-    word_ind = imdb.get_word_index()
-    word_ind = {i: word for word, i in word_ind.items()}
+    train_comments = pd.read_csv(data[1], skiprows=1, header=None, usecols=[2, 3])
+    test_comments = pd.read_csv(data[2], skiprows=1, header=None, usecols=[2, 3])
 
-    (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=vocab_size)
+    sentences = pd.concat([train_comments[3], test_comments[3], tweetsNeg[2], tweetsPos[2]], axis=0)
+    value = pd.concat([train_comments[2], test_comments[2], tweetsNeg[0], tweetsPos[0]], axis=0)
 
-    print([word_ind[i] for i in x_train[0]])
-    print("Max length of a review:: ", len(max((x_train + x_test), key=len)))
-    print("Min length of a review:: ", len(min((x_train + x_test), key=len)))
+    df = pd.concat([value, sentences], axis=1)
+    dfTrain = df.sample(frac=0.7, random_state=123)
+    dfTest = df.drop(dfTrain.index)
 
-    x_train = keras.utils.pad_sequences(x_train, maxlen=max_words)
-    x_test = keras.utils.pad_sequences(x_test, maxlen=max_words)
+    (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
+    (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
 
-    x_valid, y_valid = x_train[:64], y_train[:64]
-    x_train_, y_train_ = x_train[64:], y_train[64:]
+    x_train = x_train.str.split(pat=' ')
+    x_test = x_test.str.split(pat=' ')
 
-    print(f'Valid x - {x_valid}')
+    y_train = y_train.apply(lambda num: 1 if num > 3 else 0)
+    y_test = y_test.apply(lambda num: 1 if num > 3 else 0)
+
+    max_len = 10
+    min_len = 4
+
+    def dataNormalizaition(data, max_len):
+        data = data[:10]
+        for i in range(max_len):
+            if i < len(data):
+                data[i] = ftModel.get_word_vector(data[i])
+            else:
+                data.append(ftModel.get_word_vector('_'))
+        return np.stack(data, axis=0)
+
+    ftModel = fasttext.load_model(ftModelData)
+    x_train = x_train.apply(lambda string: dataNormalizaition(data=string, max_len=max_len))
+
+    x_train = x_train.to_numpy()
+    x_valid = np.empty((x_train.shape[0], x_train[0].shape[0], x_train[0].shape[1]))
+    for i, sentence in enumerate(x_train):
+        x_valid[i] = sentence
