@@ -13,9 +13,6 @@ def trainFastText(data):
 
 
 def readFastTextModel(model):
-    model = fasttext.load_model('data/supervised_ft_model.bin')
-    # print(model.get_nearest_neighbors(str(input('Write a word: '))))
-    # sentence = sentence.split(sep=' ')
-    # [print(model.get_word_vector(word)) for word in sentence]
+    model = fasttext.load_model(model)
     while True:
         print(model.predict(str(input('Write a sentence: '))))
