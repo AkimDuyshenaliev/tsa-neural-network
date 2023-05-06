@@ -1,8 +1,6 @@
 from dataCleaning import tweetsCleaning, csvCleaning, makeTrainSeries
 from utils.trainFT import trainFastText, readFastTextModel
-from model import textSentiment_RNN_neuralNetwork
-from model_example_rnn import example_RNN
-from model_example_cnn import example_CNN
+from model import data_preprocessing, ft_cnn_model, rnn_model
 
 
 class FileNames:
@@ -10,6 +8,7 @@ class FileNames:
     dataPath = 'data/data-to-clean/stars_and_comments.csv'
     freqrnc = 'data/data-to-clean/freqrnc2011.csv'
     ftModel = 'data/test_model.bin'
+    ft_supervised_model = 'data/supervised_ft_model.bin'
     unsupervisedTrainData = 'data/train-data/unsupervised_train_data.csv'
     tweets = ['data/tweets-data/negative.csv', 'data/tweets-data/positive.csv']
     cleanComments = ['data/clean-data/clean_comments.csv', 'data/clean-data/clean_train_comments.csv', 'data/clean-data/clean_test_comments.csv']
@@ -31,22 +30,28 @@ if __name__ == '__main__':
          'func': lambda: makeTrainSeries(
             commentData=FileNames.cleanComments, 
             tweetsData=FileNames.cleanTweets)},
-        {'name': 'train FastText',
+        {'name': 'Train supervised FastText',
          'func': lambda: trainFastText(
             data=FileNames.unsupervisedTrainData)},
-        {'name': 'load FastText model',
+        {'name': 'Load supervised FT model',
          'func': lambda: readFastTextModel(
-            model=FileNames.ftModel)},
-        {'name': 'Final model',
-         'func': lambda: textSentiment_RNN_neuralNetwork(
+            model=FileNames.ft_supervised_model)},
+        {'name': 'Data preprocessing',
+         'func': lambda: data_preprocessing(
                 data=FileNames.cleanComments,
                 tweetsData=FileNames.cleanTweets,
                 ftModelData=FileNames.ftModel)},
-        {'name': 'model example RNN',
-         'func': lambda: example_RNN()},
-        {'name': 'model example CNN',
-         'func': lambda: example_CNN()}
-    ]
+        {'name': 'CNN with FastText model',
+         'func': lambda: ft_cnn_model(
+                data=FileNames.cleanComments,
+                tweetsData=FileNames.cleanTweets,
+                ftModelData=FileNames.ftModel)},
+        {'name': 'RNN with FastText model',
+         'func': lambda: rnn_model(
+                data=FileNames.cleanComments,
+                tweetsData=FileNames.cleanTweets,
+                ftModelData=FileNames.ftModel)},
+        ]
     while True:
         try:
             print('\n')
