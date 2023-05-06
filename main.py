@@ -37,7 +37,7 @@ if __name__ == '__main__':
         {'name': 'load FastText model',
          'func': lambda: readFastTextModel(
             model=FileNames.ftModel)},
-        {'name': 'RNN model',
+        {'name': 'Final model',
          'func': lambda: textSentiment_RNN_neuralNetwork(
                 data=FileNames.cleanComments,
                 tweetsData=FileNames.cleanTweets,
