@@ -1,6 +1,7 @@
 from dataCleaning import tweetsCleaning, csvCleaning, makeTrainSeries
 from utils.trainFT import trainFastText, readFastTextModel
-from model import data_preprocessing, ft_cnn_model, rnn_model
+from model import ft_cnn_model, rnn_model
+from utils.utils import data_preprocessing
 
 
 class FileNames:
