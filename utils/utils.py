@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -167,6 +170,10 @@ def data_preprocessing(data, tweetsData, ftModelData):
 
     # unique, counts = np.unique(y_valid, return_counts=True)
     # print(dict(zip(unique, counts)))
+
+    print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
+    print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
+    print(f'FastTest embedding: {ftEmbedding}')
     # ### End of embedding using fasttext
 
     return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding
