@@ -1,16 +1,11 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
+import fasttext
 
-def binSearch(data, search):
-    while True:
-        listMid = (len(data)-1)//2
-        if search == data[listMid]:
-            return listMid
-        elif search > data[listMid]:
-            del data[:listMid+1]
-            continue
-        elif search < data[listMid]:
-            del data[listMid+1:]
-            continue
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
 def color(r="38", g="05", b="222"):
@@ -25,3 +20,153 @@ def color(r="38", g="05", b="222"):
 
 def coloring(data, r="38", g="05", b="222"):
     color(r, g, b)(lambda: print(data, end=""))()
+
+
+def draw_plt(history):
+    plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
+    plt.plot(history.history['val_loss'], label = 'val_loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.ylim([0.5, 1])
+    plt.legend(loc='lower right')
+
+    plt.show()
+
+
+def export_for_fasttext(df):
+    ### Prepare data for fasttext supervised training
+    df_ft = df.set_axis(['value', 'data'], axis=1).reset_index(drop=True)
+    df_ft['value'] = df_ft['value'].apply(lambda string: 'negative' if string == 0 else 'positive')
+    df_ft['value'] = '__label__' + df_ft['value'].astype(str)
+    df_ft['text'] = df_ft['value'] + ' ' + df_ft['data']
+    df_ft.drop(['value', 'data'], axis=1,inplace=True)
+    df_ft.to_csv('data/ft_training_data.txt', header=None, index=False)
+    df_ft.to_string('data/test.txt')
+
+    coloring(data='Successfully exported', r='38', g='05', b='46')
+    ### End of preparing data for fasttext supervised training
+
+
+def match_words_with_numbers(df):
+    ftEmbedding = 0
+
+    num_words = 10000
+    oov_token = '<UNK>'
+    pad_type = 'post'
+    trunc_type = 'post'
+    maxlen = 10
+
+    dfTrain = df.sample(frac=0.7, random_state=123)
+    train_data = dfTrain[1].tolist()
+    y_valid = dfTrain[0].to_numpy().astype('int8').flatten()
+
+    dfTest = df.drop(dfTrain.index)
+    test_data = dfTest[1].tolist()
+    y_test_valid = dfTest[0].to_numpy().astype('int8').flatten()
+
+    # Tokenize our training data
+    tokenizer = Tokenizer(num_words=num_words, oov_token=oov_token)
+    tokenizer.fit_on_texts(train_data)
+
+    # Encode training data sentences into sequences
+    train_sequences = tokenizer.texts_to_sequences(train_data)
+
+    # Pad the training sequences
+    x_valid = pad_sequences(train_sequences, padding=pad_type, truncating=trunc_type, maxlen=maxlen)
+
+    test_sequences = tokenizer.texts_to_sequences(test_data)
+    x_test_valid = pad_sequences(test_sequences, padding=pad_type, truncating=trunc_type, maxlen=maxlen)
+
+    print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
+    print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
+    print(f'FastTest embedding: {ftEmbedding}')
+
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding
+
+
+def data_preprocessing(data, tweetsData, ftModelData):
+    '''
+    0 - negative
+    1 - positive
+    '''
+
+    tweetsPos = pd.read_csv(tweetsData[1], skiprows=1, header=None, usecols=[2])
+    tweetsNeg = pd.read_csv(tweetsData[0], skiprows=1, header=None, usecols=[2])
+    tweetsPos.insert(loc=0, column=0, value=1) # Add value of "1" for every row
+    tweetsNeg.insert(loc=0, column=0, value=0) # Add value of "0" for every row
+
+    train_comments = pd.read_csv(data[1], skiprows=1, header=None, usecols=[2, 3])
+    train_comments[2] = train_comments[2].apply(lambda num: 1 if num > 3 else 0)
+
+    test_comments = pd.read_csv(data[2], skiprows=1, header=None, usecols=[2, 3])
+    test_comments[2] = test_comments[2].apply(lambda num: 1 if num > 3 else 0)
+
+    sentences = pd.concat([train_comments[3], test_comments[3], tweetsNeg[2], tweetsPos[2]], axis=0)
+    value = pd.concat([train_comments[2], test_comments[2], tweetsNeg[0], tweetsPos[0]], axis=0)
+
+    df = pd.concat([value, sentences], axis=1).reset_index(drop=True)
+    dfTrain = df.sample(frac=0.7, random_state=123)
+    dfTest = df.drop(dfTrain.index)
+
+    try:
+        print('\n0 - Export to embedding function\n1 - Use FastText embedding\n2 - Export for FastText training\n')
+        ftEmbedding = int(input('What to do: '))
+        match ftEmbedding:
+            case 0:
+                return match_words_with_numbers(df=df)
+            case 1:
+                pass
+            case 2:
+                export_for_fasttext(df)
+                return
+            case _:
+                print('No such option, defaulting to option 1')
+    except ValueError:
+        ftEmbedding = 1
+        print('No such option, defaulting to option 1')
+
+    (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
+    (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
+
+    x_train = x_train.str.split(pat=' ')
+    x_test = x_test.str.split(pat=' ')
+
+    y_train = y_train.to_numpy()
+    y_valid = y_train.astype('int8').flatten()
+
+    y_test = y_test.to_numpy()
+    y_test_valid = y_test.astype('int8').flatten()
+
+    max_len = 10
+    min_len = 4
+
+    ### Normalizing data and embedding using fasttext
+    def dataNormalizaition(data, max_len):
+        data = data[:10]
+        for i in range(max_len):
+            if i < len(data):
+                data[i] = ftModel.get_word_vector(data[i]).astype('float32')
+            else:
+                data.append(np.zeros(shape=100, dtype=np.float32))
+        return np.stack(data, axis=0)
+
+    ftModel = fasttext.load_model(ftModelData)
+    x_train = x_train.apply(lambda string: dataNormalizaition(data=string, max_len=max_len))
+    x_test = x_test.apply(lambda string: dataNormalizaition(data=string, max_len=max_len))
+
+    x_train = x_train.to_numpy()
+    x_test = x_test.to_numpy()
+    
+    x_valid = np.empty((x_train.shape[0], x_train[0].shape[0], x_train[0].shape[1])).astype('float32')
+    for i, sentence in enumerate(x_train):
+        x_valid[i] = sentence
+
+    x_test_valid = np.empty((x_test.shape[0], x_test[0].shape[0], x_test[0].shape[1])).astype('float32')
+    for i, sentence in enumerate(x_test):
+        x_test_valid[i] = sentence
+
+    # unique, counts = np.unique(y_valid, return_counts=True)
+    # print(dict(zip(unique, counts)))
+    # ### End of embedding using fasttext
+
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding
