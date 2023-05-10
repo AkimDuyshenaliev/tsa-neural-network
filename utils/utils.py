@@ -102,19 +102,41 @@ def match_words_with_numbers(df, max_len, vocab_size):
     return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
 
 
-def imdb_data(max_len, vocab_size):
+def imdb_data(max_len, vocab_size, forFT=False):
     max_features = vocab_size
     maxlen = max_len  # cut texts after this number of words (among top max_features most common words)
     ftEmbedding=0
 
     (x_train, y_valid), (x_test, y_test_valid) = imdb.load_data(num_words=max_features)
 
-    x_valid = pad_sequences(x_train, maxlen=maxlen)
-    x_test_valid = pad_sequences(x_test, maxlen=maxlen)
+    if forFT is True:
+        # Use the default parameters to keras.datasets.imdb.load_data
+        start_char = 1
+        oov_char = 2
+        index_from = 3
+        index_from = 3
 
-    print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
-    print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
-    print(f'FastTest embedding: {ftEmbedding}')
+        # Retrieve the word index file mapping words to indices
+        word_index = imdb.get_word_index()
+
+        # Reverse the word index to obtain a dict mapping indices to words
+        # And add `index_from` to indices to sync with `x_train`
+        inverted_word_index = dict(
+            (i + index_from, word) for (word, i) in word_index.items()
+        )
+        # Update `inverted_word_index` to include `start_char` and `oov_char`
+        inverted_word_index[start_char] = ""
+        inverted_word_index[oov_char] = ""
+
+        x_train = pd.Series(x_train)
+        x_test = pd.Series(x_test)
+
+        # Decode the first sequence in the dataset
+        x_valid = x_train.apply(lambda sentence: " ".join(inverted_word_index[i] for i in sentence))
+        x_test_valid = x_test.apply(lambda sentence: " ".join(inverted_word_index[i] for i in sentence))
+    else:
+        x_valid = pad_sequences(x_train, maxlen=maxlen)
+        x_test_valid = pad_sequences(x_test, maxlen=maxlen)
 
     return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
 
@@ -152,7 +174,8 @@ def data_preprocessing(data, tweetsData, ftModelData):
 0 - Export to embedding function
 1 - Use FastText embedding
 2 - Export for FastText training
-3 - Imdb Dataset
+3 - IMDB Dataset using tensorflow embedding
+4 - IMDB Dataset using FastText embedding
         ''')
         ftEmbedding = int(input('What to do: '))
         match ftEmbedding:
@@ -161,35 +184,39 @@ def data_preprocessing(data, tweetsData, ftModelData):
                 return match_words_with_numbers(df=df, max_len=max_len, vocab_size=vocab_size)
             case 1:
                 print('Using FastText embedding')
-                pass
+                (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
+                (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
+
+                y_train = y_train.to_numpy()
+                y_valid = y_train.astype('int8').flatten()
+
+                y_test = y_test.to_numpy()
+                y_test_valid = y_test.astype('int8').flatten()
             case 2:
                 print('Exporting for FastText training')
                 export_for_fasttext(df)
                 return
             case 3:
-                print('Using IMDB Dataset')
+                print('Using IMDB Dataset with tensorflow embedding')
                 return imdb_data(max_len=max_len, vocab_size=vocab_size)
+            case 4:
+                print('Using IMDB Dataset with fasttext embedding')
+                (x_train, y_valid), (x_test, y_test_valid), _, _ = imdb_data(
+                    max_len=max_len, 
+                    vocab_size=vocab_size,
+                    forFT=True)
             case _:
                 print('No such option, defaulting to option 1')
     except ValueError:
         ftEmbedding = 1
         print('No such option, defaulting to option 1')
 
-    (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
-    (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
-
     x_train = x_train.str.split(pat=' ')
     x_test = x_test.str.split(pat=' ')
 
-    y_train = y_train.to_numpy()
-    y_valid = y_train.astype('int8').flatten()
-
-    y_test = y_test.to_numpy()
-    y_test_valid = y_test.astype('int8').flatten()
-
     ### Normalizing data and embedding using fasttext
     def dataNormalizaition(data, max_len):
-        data = data[:10]
+        data = data[:max_len]
         for i in range(max_len):
             if i < len(data):
                 data[i] = ftModel.get_word_vector(data[i]).astype('float32')
