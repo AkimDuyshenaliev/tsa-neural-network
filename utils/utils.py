@@ -10,6 +10,8 @@ import fasttext
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
+from keras.datasets import imdb
+
 
 def color(r="38", g="05", b="222"):
     def my_docorator(func):
@@ -26,11 +28,24 @@ def coloring(data, r="38", g="05", b="222"):
 
 
 def draw_plt(history):
+    def plot_graphs(history, metric):
+        plt.plot(history.history[metric])
+        plt.plot(history.history['val_'+metric], '')
+        plt.xlabel("Epochs")
+        plt.ylabel(metric)
+        plt.legend([metric, 'val_'+metric])
+
+    plt.figure(figsize=(16, 6))
+    plt.subplot(2, 2, 2)
+    plot_graphs(history, 'accuracy')
+    plt.subplot(2, 2, 1)
+    plot_graphs(history, 'loss')
+
+    plt.subplot(2, 1, 2)
     plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
     plt.plot(history.history['val_loss'], label = 'val_loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.ylim([0.5, 1])
+    plt.xlabel('Epochs')
+    plt.ylabel('Validated accuracy')
     plt.legend(loc='lower right')
 
     plt.show()
@@ -50,14 +65,14 @@ def export_for_fasttext(df):
     ### End of preparing data for fasttext supervised training
 
 
-def match_words_with_numbers(df):
+def match_words_with_numbers(df, max_len, vocab_size):
     ftEmbedding = 0
 
-    num_words = 10000
+    num_words = vocab_size
     oov_token = '<UNK>'
     pad_type = 'post'
     trunc_type = 'post'
-    maxlen = 10
+    maxlen = max_len
 
     dfTrain = df.sample(frac=0.7, random_state=123)
     train_data = dfTrain[1].tolist()
@@ -84,7 +99,24 @@ def match_words_with_numbers(df):
     print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
     print(f'FastTest embedding: {ftEmbedding}')
 
-    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
+
+
+def imdb_data(max_len, vocab_size):
+    max_features = vocab_size
+    maxlen = max_len  # cut texts after this number of words (among top max_features most common words)
+    ftEmbedding=0
+
+    (x_train, y_valid), (x_test, y_test_valid) = imdb.load_data(num_words=max_features)
+
+    x_valid = pad_sequences(x_train, maxlen=maxlen)
+    x_test_valid = pad_sequences(x_test, maxlen=maxlen)
+
+    print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
+    print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
+    print(f'FastTest embedding: {ftEmbedding}')
+
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
 
 
 def data_preprocessing(data, tweetsData, ftModelData):
@@ -92,6 +124,10 @@ def data_preprocessing(data, tweetsData, ftModelData):
     0 - negative
     1 - positive
     '''
+
+    max_len = 10
+    min_len = 4
+    vocab_size = 10000
 
     tweetsPos = pd.read_csv(tweetsData[1], skiprows=1, header=None, usecols=[2])
     tweetsNeg = pd.read_csv(tweetsData[0], skiprows=1, header=None, usecols=[2])
@@ -112,16 +148,27 @@ def data_preprocessing(data, tweetsData, ftModelData):
     dfTest = df.drop(dfTrain.index)
 
     try:
-        print('\n0 - Export to embedding function\n1 - Use FastText embedding\n2 - Export for FastText training\n')
+        print('''
+0 - Export to embedding function
+1 - Use FastText embedding
+2 - Export for FastText training
+3 - Imdb Dataset
+        ''')
         ftEmbedding = int(input('What to do: '))
         match ftEmbedding:
             case 0:
-                return match_words_with_numbers(df=df)
+                print('Using embedding function')
+                return match_words_with_numbers(df=df, max_len=max_len, vocab_size=vocab_size)
             case 1:
+                print('Using FastText embedding')
                 pass
             case 2:
+                print('Exporting for FastText training')
                 export_for_fasttext(df)
                 return
+            case 3:
+                print('Using IMDB Dataset')
+                return imdb_data(max_len=max_len, vocab_size=vocab_size)
             case _:
                 print('No such option, defaulting to option 1')
     except ValueError:
@@ -139,9 +186,6 @@ def data_preprocessing(data, tweetsData, ftModelData):
 
     y_test = y_test.to_numpy()
     y_test_valid = y_test.astype('int8').flatten()
-
-    max_len = 10
-    min_len = 4
 
     ### Normalizing data and embedding using fasttext
     def dataNormalizaition(data, max_len):
@@ -176,4 +220,4 @@ def data_preprocessing(data, tweetsData, ftModelData):
     print(f'FastTest embedding: {ftEmbedding}')
     # ### End of embedding using fasttext
 
-    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size

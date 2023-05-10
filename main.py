@@ -1,6 +1,6 @@
 from dataCleaning import tweetsCleaning, csvCleaning, makeTrainSeries
 from utils.trainFT import trainFastText, readFastTextModel
-from model import ft_cnn_model, rnn_model
+from model import cnn_model, rnn_model
 from utils.utils import data_preprocessing
 
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
                 tweetsData=FileNames.cleanTweets,
                 ftModelData=FileNames.ftModel)},
         {'name': 'CNN with FastText model',
-         'func': lambda: ft_cnn_model(
+         'func': lambda: cnn_model(
                 data=FileNames.cleanComments,
                 tweetsData=FileNames.cleanTweets,
                 ftModelData=FileNames.ftModel)},
