@@ -6,19 +6,20 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.callbacks import CSVLogger
 
-from utils.utils import data_preprocessing, draw_plt
+from utils.utils import data_preprocessing, draw_plt, coloring
 
 
-def rnn_model(data, tweetsData, ftModelData):
-    (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size = data_preprocessing(
+def rnn_model(data, tweetsData, ftModelData, logsPath, chosenAction=False):
+    (x_valid, y_valid), (x_test_valid, y_test_valid), forFT, vocab_size = data_preprocessing(
         data=data, 
         tweetsData=tweetsData,
-        ftModelData=ftModelData)
+        ftModelData=ftModelData,
+        chosenAction=chosenAction)
 
     units = 16
     model = keras.Sequential()
 
-    if ftEmbedding == 0:
+    if forFT is False:
         model.add(layers.Embedding(vocab_size, units*2, input_length=x_valid.shape[1]))
     else:
         model.add(layers.InputLayer(input_shape=x_valid.shape[1:]))
@@ -43,29 +44,34 @@ def rnn_model(data, tweetsData, ftModelData):
         loss=keras.losses.BinaryCrossentropy(from_logits=False),
         metrics=['accuracy'])
 
+    csv_logger = CSVLogger(f'{logsPath}rnn_embedding-option-{chosenAction}.log')
+
     history = model.fit(
         x_valid, y_valid, 
         epochs=5,
         batch_size=32,
-        validation_data=(x_test_valid, y_test_valid))
+        validation_data=(x_test_valid, y_test_valid),
+        callbacks=[csv_logger])
+
     test_loss, test_acc = model.evaluate(x_test_valid,  y_test_valid, verbose=2)
     print(test_loss, test_acc)
 
     draw_plt(history=history)
 
 
-def cnn_model(data, tweetsData, ftModelData):
-    (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size = data_preprocessing(
+def cnn_model(data, tweetsData, ftModelData, logsPath, chosenAction=False):
+    (x_valid, y_valid), (x_test_valid, y_test_valid), forFT, vocab_size = data_preprocessing(
         data=data, 
         tweetsData=tweetsData,
-        ftModelData=ftModelData) 
+        ftModelData=ftModelData, 
+        chosenAction=chosenAction)
 
     ## CNN Model ###
     afunc = 'relu'
     filters = 16
     model = keras.models.Sequential()
 
-    if ftEmbedding == 0: model.add(layers.Embedding(vocab_size, filters, input_length=x_valid.shape[1]))
+    if forFT is False: model.add(layers.Embedding(vocab_size, filters, input_length=x_valid.shape[1]))
     else:
         model.add(layers.InputLayer(input_shape=x_valid.shape[1:]))
 
@@ -88,7 +94,8 @@ def cnn_model(data, tweetsData, ftModelData):
         loss=keras.losses.BinaryCrossentropy(from_logits=False),
         metrics=['accuracy'])
 
-    csv_logger = CSVLogger('training.log')
+    csv_logger = CSVLogger(f'{logsPath}cnn_embedding-option-{chosenAction}.log')
+
     history = model.fit(
         x_valid, y_valid, 
         epochs=5,
@@ -100,3 +107,30 @@ def cnn_model(data, tweetsData, ftModelData):
     print(test_loss, test_acc)
 
     draw_plt(history=history)
+
+
+def runTest(comments, tweets, ftModels, logs):
+    print('Run test function')
+    possibleActions = [1, 2, 3, 4]
+    for chosenAction in possibleActions:
+        models = [ 
+            {'name': 'Run CNN model',
+            'func': lambda: cnn_model(
+                    data=comments,
+                    tweetsData=tweets,
+                    ftModelData=ftModels,
+                    logsPath=logs,
+                    chosenAction=chosenAction)},
+            {'name': 'Run RNN model',
+            'func': lambda: rnn_model(
+                    data=comments,
+                    tweetsData=tweets,
+                    ftModelData=ftModels,
+                    logsPath=logs,
+                    chosenAction=chosenAction)},
+        ]
+        for model in models:
+            temp = '\nRunning %s' % model['name'][4:]
+            coloring(data=temp, r='38', g='05', b='46')
+            model['func']()
+
