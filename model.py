@@ -56,7 +56,7 @@ def rnn_model(data, tweetsData, ftModelData, logsPath, chosenAction=False):
     test_loss, test_acc = model.evaluate(x_test_valid,  y_test_valid, verbose=2)
     print(test_loss, test_acc)
 
-    draw_plt(history=history)
+    draw_plt(history=history, name=f'rnn-embedding-option-{chosenAction}')
 
 
 def cnn_model(data, tweetsData, ftModelData, logsPath, chosenAction=False):
@@ -106,7 +106,7 @@ def cnn_model(data, tweetsData, ftModelData, logsPath, chosenAction=False):
     test_loss, test_acc = model.evaluate(x_test_valid,  y_test_valid, verbose=2)
     print(test_loss, test_acc)
 
-    draw_plt(history=history)
+    draw_plt(history=history, name=f'cnn-embedding-option-{chosenAction}')
 
 
 def runTest(comments, tweets, ftModels, logs):

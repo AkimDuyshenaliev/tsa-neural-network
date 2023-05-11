@@ -27,7 +27,7 @@ def coloring(data, r="38", g="05", b="222"):
     color(r, g, b)(lambda: print(data, end=""))()
 
 
-def draw_plt(history):
+def draw_plt(history, name):
     def plot_graphs(history, metric):
         plt.plot(history.history[metric])
         plt.plot(history.history['val_'+metric], '')
@@ -48,7 +48,9 @@ def draw_plt(history):
     plt.ylabel('Validated accuracy')
     plt.legend(loc='lower right')
 
-    plt.show()
+    format = 'png'
+    # plt.show()
+    plt.savefig(f'data/logs/matplot-output/{name}.{format}', format=format)
 
 
 def export_for_fasttext(df):
@@ -65,9 +67,7 @@ def export_for_fasttext(df):
     ### End of preparing data for fasttext supervised training
 
 
-def match_words_with_numbers(df, max_len, vocab_size):
-    ftEmbedding = 0
-
+def match_words_with_numbers(df, max_len, vocab_size, forFT):
     num_words = vocab_size
     oov_token = '<UNK>'
     pad_type = 'post'
@@ -95,25 +95,16 @@ def match_words_with_numbers(df, max_len, vocab_size):
     test_sequences = tokenizer.texts_to_sequences(test_data)
     x_test_valid = pad_sequences(test_sequences, padding=pad_type, truncating=trunc_type, maxlen=maxlen)
 
-    print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
-    print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
-    print(f'FastTest embedding: {ftEmbedding}')
-
-    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), forFT, vocab_size
 
 
 def imdb_data(max_len, vocab_size, forFT=False):
-    max_features = vocab_size
-    maxlen = max_len  # cut texts after this number of words (among top max_features most common words)
-    ftEmbedding=0
-
-    (x_train, y_valid), (x_test, y_test_valid) = imdb.load_data(num_words=max_features)
+    (x_train, y_valid), (x_test, y_test_valid) = imdb.load_data(num_words=vocab_size)
 
     if forFT is True:
         # Use the default parameters to keras.datasets.imdb.load_data
         start_char = 1
         oov_char = 2
-        index_from = 3
         index_from = 3
 
         # Retrieve the word index file mapping words to indices
@@ -135,13 +126,13 @@ def imdb_data(max_len, vocab_size, forFT=False):
         x_valid = x_train.apply(lambda sentence: " ".join(inverted_word_index[i] for i in sentence))
         x_test_valid = x_test.apply(lambda sentence: " ".join(inverted_word_index[i] for i in sentence))
     else:
-        x_valid = pad_sequences(x_train, maxlen=maxlen)
-        x_test_valid = pad_sequences(x_test, maxlen=maxlen)
+        x_valid = pad_sequences(x_train, maxlen=max_len)
+        x_test_valid = pad_sequences(x_test, maxlen=max_len)
 
-    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), forFT, vocab_size
 
 
-def data_preprocessing(data, tweetsData, ftModelData):
+def data_preprocessing(data, tweetsData, ftModelData, chosenAction=False):
     '''
     0 - negative
     1 - positive
@@ -166,50 +157,74 @@ def data_preprocessing(data, tweetsData, ftModelData):
     value = pd.concat([train_comments[2], test_comments[2], tweetsNeg[0], tweetsPos[0]], axis=0)
 
     df = pd.concat([value, sentences], axis=1).reset_index(drop=True)
-    dfTrain = df.sample(frac=0.7, random_state=123)
-    dfTest = df.drop(dfTrain.index)
 
-    try:
-        print('''
-0 - Export to embedding function
-1 - Use FastText embedding
-2 - Export for FastText training
-3 - IMDB Dataset using tensorflow embedding
-4 - IMDB Dataset using FastText embedding
-        ''')
-        ftEmbedding = int(input('What to do: '))
-        match ftEmbedding:
-            case 0:
-                print('Using embedding function')
-                return match_words_with_numbers(df=df, max_len=max_len, vocab_size=vocab_size)
-            case 1:
-                print('Using FastText embedding')
-                (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
-                (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
+    # Prepare data for FastText embedding
+    def ft_prepare_data(df, forFT, vocab_size):
+        dfTrain = df.sample(frac=0.7, random_state=123)
+        dfTest = df.drop(dfTrain.index)
 
-                y_train = y_train.to_numpy()
-                y_valid = y_train.astype('int8').flatten()
+        (x_train, y_train) = dfTrain.iloc[:, 1], dfTrain.iloc[:, 0]
+        (x_test, y_test) = dfTest.iloc[:, 1], dfTest.iloc[:, 0]
 
-                y_test = y_test.to_numpy()
-                y_test_valid = y_test.astype('int8').flatten()
-            case 2:
-                print('Exporting for FastText training')
-                export_for_fasttext(df)
-                return
-            case 3:
-                print('Using IMDB Dataset with tensorflow embedding')
-                return imdb_data(max_len=max_len, vocab_size=vocab_size)
-            case 4:
-                print('Using IMDB Dataset with fasttext embedding')
-                (x_train, y_valid), (x_test, y_test_valid), _, _ = imdb_data(
+        y_train = y_train.to_numpy()
+        y_valid = y_train.astype('int8').flatten()
+
+        y_test = y_test.to_numpy()
+        y_test_valid = y_test.astype('int8').flatten()
+        return (x_train, y_valid), (x_test, y_test_valid), forFT, vocab_size 
+
+    options = [
+        {'name': 'Exit'},
+        {'name': 'Custom Dataset, Tensorflow embedding',
+         'func': lambda: match_words_with_numbers(
+                    df=df, 
                     max_len=max_len, 
                     vocab_size=vocab_size,
-                    forFT=True)
-            case _:
-                print('No such option, defaulting to option 1')
+                    forFT=False)},
+        {'name': 'Custom Dataset, FastText embedding',
+         'func': lambda: ft_prepare_data(
+                    df=df,
+                    vocab_size=vocab_size,
+                    forFT=True)},
+        {'name': 'IMDB Dataset, Tensorflow embedding',
+         'func': lambda: imdb_data(
+                    max_len=max_len, 
+                    vocab_size=vocab_size,
+                    forFT=False)},
+        {'name': 'IMDB Dataset, FastText embedding',
+         'func': lambda: imdb_data(
+                    max_len=max_len, 
+                    vocab_size=vocab_size,
+                    forFT=True)},
+        {'name': 'Export for FastText training',
+         'func': lambda: export_for_fasttext(
+                    df=df)},
+    ]
+    try:
+        if chosenAction is False:
+            print('\n')
+            {print(f"{key}: {option['name']}") for key, option in enumerate(options)}
+            if (choice := int(input('\nChoose what to do: '))) == 0:
+                print('Exiting\n')
+                return
+        else:
+            choice = chosenAction
     except ValueError:
-        ftEmbedding = 1
-        print('No such option, defaulting to option 1')
+        print('Exiting\n')
+        return
+    except IndexError:
+        print('No such option\n')
+        return
+    
+    print('Chosen - %s' % options[choice]['name'])
+    (x_train, y_valid), (x_test, y_test_valid), forFT, vocab_size = options[choice]['func']()
+
+    # If FastText embedding was not chosen then return data
+    if forFT is False:
+        print(f'Train data: {x_train.shape}, {y_valid.shape}')
+        print(f'Test data:  {x_test.shape}, {y_test_valid.shape}')
+        print(f'FastTest embedding: {forFT}')
+        return (x_train, y_valid), (x_test, y_test_valid), forFT, vocab_size
 
     x_train = x_train.str.split(pat=' ')
     x_test = x_test.str.split(pat=' ')
@@ -224,7 +239,7 @@ def data_preprocessing(data, tweetsData, ftModelData):
                 data.append(np.zeros(shape=100, dtype=np.float32))
         return np.stack(data, axis=0)
 
-    ftModel = fasttext.load_model(ftModelData)
+    ftModel = fasttext.load_model(ftModelData[0] if choice != 4 else ftModelData[1])
     x_train = x_train.apply(lambda string: dataNormalizaition(data=string, max_len=max_len))
     x_test = x_test.apply(lambda string: dataNormalizaition(data=string, max_len=max_len))
 
@@ -239,12 +254,9 @@ def data_preprocessing(data, tweetsData, ftModelData):
     for i, sentence in enumerate(x_test):
         x_test_valid[i] = sentence
 
-    # unique, counts = np.unique(y_valid, return_counts=True)
-    # print(dict(zip(unique, counts)))
-
     print(f'Train data: {x_valid.shape}, {x_test_valid.shape}')
     print(f'Test data:  {y_valid.shape}, {y_test_valid.shape}')
-    print(f'FastTest embedding: {ftEmbedding}')
+    print(f'FastTest embedding: {forFT}')
     # ### End of embedding using fasttext
 
-    return (x_valid, y_valid), (x_test_valid, y_test_valid), ftEmbedding, vocab_size
+    return (x_valid, y_valid), (x_test_valid, y_test_valid), forFT, vocab_size
